@@ -1,40 +1,36 @@
-from fastapi import FastAPI, HTTPException, Depends
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.database import User, SessionLocal
+from app.database import engine, Base
+from app.models import User
+from app.schemas import UserIn, UserOut
+from app.dependencies import get_db
 
 app = FastAPI()
+Base.metadata.create_all(bind=engine)
 
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-@app.get("/users/", response_model=list[User])
-def get_all_users(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
-    users = db.query(User).offset(skip).limit(limit).all()
+@app.get("/users")
+def get_users(db: Session = Depends(get_db)):
+    users = db.query(User).all()
     return users
 
 
-@app.get("/users/{user_id}", response_model=User)
-def get_user(user_id: int, db: Session = Depends(get_db)):
+@app.get("/users/{user_id}", response_model=UserOut)
+async def read_user(user_id: int, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
-    if user is None:
+    if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    return user
+    return UserOut(**user.__dict__)
 
 
-@app.post("/users/", response_model=User)
-def create_user(user: UserCreate, db: Session = Depends(get_db)):
+@app.post("/users", response_model=UserOut)
+async def create_user(user: UserIn, db: Session = Depends(get_db)):
     existing_user = db.query(User).filter(User.name == user.name).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Name already exists")
+
     db_user = User(name=user.name)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
-    return db_user
+    return UserOut(**db_user.__dict__)
