@@ -14,5 +14,9 @@ This project is intended to be used as a sample/boilerplate for how to set up Fa
 ## Other concepts to know
 
 1. Tests: `invoke test`
-2. Migrations:
+2. Migrations
 3. Seeding data
+
+## Notes
+
+1. When creating the database (`invoke start_database`) command, you can modify the database name, username, and password: `invoke start_database --database_name="replace_me" --username="replace_me" --username="replace_me"`
